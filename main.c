@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     memset(cache, 0, s * E * sizeof(struct cache_line));
 
     execute(cache);
-
+    printf("%d %d %d", hit_count, miss_count, eviction_count);
     free(cache);
     return 0;
 }
@@ -88,32 +88,31 @@ void fetchIns(void *ccache, unsigned address, unsigned size) {
     struct cache_line (*cache)[E] = ccache;
     unsigned and_opn = (1 << s) - 1;
     //每次访问的大小不同，访问的地址可能分布在不同的块中
-    for (unsigned offset = 0; offset < size; offset++) {
-        unsigned lid = (address + offset) >> b; //lid 即当前访问的地址所在的块编号
-        unsigned sid = lid & (and_opn);   //sid 为当前块应该在哪一个set
-        unsigned tid = lid >> s;
-        for (unsigned i = 0; i < E; i++) {
-            if (tid == cache[sid][i].tag) {
-                //如果找到了对应的tag
-                find = 1;
-                if (cache[sid][i].valid == 1) {
-//                    printf("addr:%x lid:%x sid:%x tid:%x hit\n", address, lid, sid, tid);
-                    hit_count++;
-                    cache[sid][i].counter = LRU_counter++;
-                    break;
-                } else {
-//                    printf("addr:%x lid:%x sid:%x tid:%x miss\n", address, lid, sid, tid);
-                    miss_count++;
-                    lineIn(cache, sid, tid);
-                    break;
-                }
+
+    unsigned lid = (address) >> b; //lid 即当前访问的地址所在的块编号
+    unsigned sid = lid & (and_opn);   //sid 为当前块应该在哪一个set
+    unsigned tid = lid >> s;
+    for (unsigned i = 0; i < E; i++) {
+        if (tid == cache[sid][i].tag) {
+            //如果找到了对应的tag
+            find = 1;
+            if (cache[sid][i].valid == 1) {
+                printf("addr:%x lid:%x sid:%x tid:%x hit\n", address, lid, sid, tid);
+                hit_count++;
+                cache[sid][i].counter = LRU_counter++;
+                break;
+            } else {
+                printf("addr:%x lid:%x sid:%x tid:%x miss\n", address, lid, sid, tid);
+                miss_count++;
+                lineIn(cache, sid, tid);
+                break;
             }
         }
-        if (!find){
-//            printf("addr:%x lid:%x sid:%x tid:%x miss ", address, lid, sid, tid);
-            miss_count++;
-            lineIn(cache, sid, tid);
-        }
+    }
+    if (!find) {
+        printf("addr:%x lid:%x sid:%x tid:%x miss\n", address, lid, sid, tid);
+        miss_count++;
+        lineIn(cache, sid, tid);
     }
 }
 
